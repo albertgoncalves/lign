@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+export WD=$PWD
+
+if [ ! -d "$WD/out" ]; then
+    mkdir "$WD/out"
+fi
+
+handle () {
+    echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/'
+}
+
+score () {
+    lilypond -o "$WD/out" -dbackend=eps -ddelete-intermediate-files \
+        -dinclude-eps-fonts -dno-gs-load-fonts -dpixmap-format=pngalpha --png \
+        "$1" && \
+    feh -B white "$WD/out/$(handle "$1").png"
+}
+
+midi () {
+    x="$WD/out/$(handle "$1").wav"
+    timidity "$1" -Ow -o "$x"
+    aplay "$x"
+}
+
+export -f score
+export -f midi
