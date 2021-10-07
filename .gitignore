@@ -2,5 +2,8 @@
 !.gitignore
 !*.nix
 !.shellhook
+!.clang-format
 !src/
-!*.ly
+!*.hpp
+!*.cpp
+!main

@@ -2,9 +2,11 @@
 
 export WD=$PWD
 
-if [ ! -d "$WD/out" ]; then
-    mkdir "$WD/out"
-fi
+for x in bin out; do
+    if [ ! -d "$WD/$x" ]; then
+        mkdir "$WD/$x"
+    fi
+done
 
 handle () {
     echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/'
@@ -19,7 +21,7 @@ score () {
 
 midi () {
     x="$WD/out/$(handle "$1").wav"
-    timidity "$1" -Ow -o "$x"
+    timidity "$1" -Ow -o "$x" && \
     aplay "$x"
 }
 
