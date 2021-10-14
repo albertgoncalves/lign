@@ -2,8 +2,7 @@
 !.gitignore
 !*.nix
 !.shellhook
-!.clang-format
+!.ocp-indent
 !src/
-!*.hpp
-!*.cpp
+!*.ml
 !main

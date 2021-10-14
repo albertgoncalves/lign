@@ -3,36 +3,19 @@
 set -eu
 
 flags=(
-    "-ferror-limit=1"
-    "-fno-autolink"
-    "-fno-exceptions"
-    "-fno-math-errno"
-    "-fno-omit-frame-pointer"
-    "-fno-rtti"
-    "-fno-unwind-tables"
-    "-fsanitize=address"
-    "-fsanitize=undefined"
-    "-fshort-enums"
-    "-fuse-ld=lld"
-    "-march=native"
-    "-O1"
-    "-std=c++11"
-    "-Werror"
-    "-Weverything"
-    "-Wno-extra-semi-stmt"
-    "-Wno-reserved-id-macro"
+    -ccopt "-static"
+    -nolabels
+    -strict-formats
+    -strict-sequence
+    -unboxed-types
+    -w "+1..67-4"
 )
 
-now () {
-    date +%s.%N
-}
+ocp-indent -i "$WD/src/"*.ml
+cp "$WD/src/"*.ml "$WD/build/"
 
 (
-    start=$(now)
-    clang-format -i -verbose "$WD/src"/*
-    clang++ "${flags[@]}" -o "$WD/bin/main" "$WD/src/main.cpp"
-    end=$(now)
-    python3 -c "print(\"Compiled! ({:.3f}s)\n\".format($end - $start))"
+    cd "$WD/build/"
+    ocamlc "${flags[@]}" "main.ml" -o "$WD/bin/main"
+    "$WD/bin/main" > "$WD/out/melody.ly"
 )
-
-time "$WD/bin/main" "$WD/out/melody.ly"

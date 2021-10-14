@@ -1,9 +1,13 @@
 with import <nixpkgs> {};
-mkShell.override { stdenv = llvmPackages_12.stdenv; } {
+mkShell {
     buildInputs = [
+        (with ocamlPackages; [
+            ocaml
+            ocp-indent
+        ])
         feh
         lilypond
-        llvmPackages_12.lld
+        ocaml
         shellcheck
         timidity
     ];
