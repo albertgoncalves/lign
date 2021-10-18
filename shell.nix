@@ -7,7 +7,6 @@ mkShell {
         ])
         feh
         lilypond
-        ocaml
         shellcheck
         timidity
     ];
