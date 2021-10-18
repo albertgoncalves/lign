@@ -8,7 +8,7 @@ flags=(
     -strict-formats
     -strict-sequence
     -unboxed-types
-    -w "+1..67-4"
+    -w "+1..67-40-42"
 )
 
 ocp-indent -i "$WD/src/"*.ml
@@ -17,5 +17,5 @@ cp "$WD/src/"*.ml "$WD/build/"
 (
     cd "$WD/build/"
     ocamlc "${flags[@]}" "main.ml" -o "$WD/bin/main"
-    "$WD/bin/main" > "$WD/out/melody.ly"
+    "$WD/bin/main" "$WD/out/melody.ly"
 )
