@@ -176,6 +176,34 @@ module Triad = struct
     (pitch, Pitch.major_third_above pitch, Pitch.augmented_fifth_above pitch)
 end
 
+module Arpeggio = struct
+  type t = Pitch.t array
+
+  let from_triad ((root, third, fifth) : Triad.t) : t =
+    Array.init 3
+      (function
+        | 0 -> root
+        | 1 -> third
+        | 2 -> fifth
+        | _ -> raise Exit)
+
+  let cycle (n : int) (x : t) (i : int) : (int * Pitch.t) =
+    let j : int = modulo (i + n) (Array.length x) in
+    (j, x.(j))
+
+  let walk_down : t -> int -> (int * Pitch.t) =
+    cycle (-1)
+
+  let walk_up : t -> int -> (int * Pitch.t) =
+    cycle 1
+
+  let walk_random : t -> int -> (int * Pitch.t) =
+    if Random.bool () then
+      walk_down
+    else
+      walk_up
+end
+
 let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
   Note.render buffer (Queue.take notes);
   Queue.iter (fun x -> Buffer.add_char buffer ' '; Note.render buffer x) notes
