@@ -89,28 +89,28 @@ module Pitch = struct
     else
       raise Exit
 
-  let minor_third_below =
+  let minor_third_below : t -> t =
     interval (-2) (-3)
 
-  let minor_third_above =
+  let minor_third_above : t -> t =
     interval 2 3
 
-  let major_third_below =
+  let major_third_below : t -> t =
     interval (-2) (-4)
 
-  let major_third_above =
+  let major_third_above : t -> t =
     interval 2 4
 
-  let perfect_fifth_below =
+  let perfect_fifth_below : t -> t =
     interval (-4) (-7)
 
-  let perfect_fifth_above =
+  let perfect_fifth_above : t -> t =
     interval 4 7
 
-  let diminished_fifth_above =
+  let diminished_fifth_above : t -> t =
     interval 4 6
 
-  let augmented_fifth_above =
+  let augmented_fifth_above : t -> t =
     interval 4 8
 
   let test () : unit =
