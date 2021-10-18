@@ -1,3 +1,11 @@
+let modulo (x : int) (n : int) =
+  if x < 0 then
+    (x mod n) + n
+  else if n <= x then
+    x mod n
+  else
+    x
+
 module Tone = struct
   type t = A | B | C | D | E | F | G
 
@@ -24,15 +32,7 @@ module Tone = struct
     | G -> 6
 
   let from_int (x : int) : t =
-    match (
-      if x < 0 then (
-        (x mod 7) + 7
-      ) else if 6 < x then (
-        x mod 7
-      ) else (
-        x
-      )
-    ) with
+    match modulo x 7 with
     | 0 -> A
     | 1 -> B
     | 2 -> C
@@ -40,9 +40,9 @@ module Tone = struct
     | 4 -> E
     | 5 -> F
     | 6 -> G
-    | _ -> exit 1
+    | _ -> raise Exit
 
-  let interval (n : int) (x : t) : t =
+  let step (n : int) (x : t) : t =
     from_int ((to_int x) + n)
 end
 
@@ -58,6 +58,86 @@ end
 
 module Pitch = struct
   type t = (Tone.t * Accidental.t)
+
+  let to_int : t -> int =
+    function
+    | (C, Natural) -> 0
+    | (C, Sharp) | (D, Flat) -> 1
+    | (D, Natural) -> 2
+    | (D, Sharp) | (E, Flat) -> 3
+    | (E, Natural) | (F, Flat) -> 4
+    | (E, Sharp) | (F, Natural) -> 5
+    | (F, Sharp) | (G, Flat) -> 6
+    | (G, Natural) -> 7
+    | (G, Sharp) | (A, Flat) -> 8
+    | (A, Natural) -> 9
+    | (A, Sharp) | (B, Flat) -> 10
+    | (B, Natural) | (C, Flat) -> 11
+    | _ -> raise Exit
+
+  let interval (steps : int) (semitones : int) ((tone0, _) as pitch0 : t) : t =
+    let semitones : int = modulo semitones 12 in
+    let tone1 : Tone.t = Tone.from_int ((Tone.to_int tone0) + steps) in
+    let pitch1 : t = (tone1, Natural) in
+    let n : int = modulo ((to_int pitch1) - (to_int pitch0)) 12 in
+    if semitones = n then
+      pitch1
+    else if (modulo (semitones + 1) 12) = n then
+      (tone1, Flat)
+    else if (modulo (semitones - 1) 12) = n then
+      (tone1, Sharp)
+    else
+      raise Exit
+
+  let minor_third_below =
+    interval (-2) (-3)
+
+  let minor_third_above =
+    interval 2 3
+
+  let major_third_below =
+    interval (-2) (-4)
+
+  let major_third_above =
+    interval 2 4
+
+  let perfect_fifth_below =
+    interval (-4) (-7)
+
+  let perfect_fifth_above =
+    interval 4 7
+
+  let diminished_fifth_above =
+    interval 4 6
+
+  let augmented_fifth_above =
+    interval 4 8
+
+  let test () : unit =
+    assert ((interval 0 (-1) (C, Natural)) = (C, Flat));
+    assert ((interval 0 0 (C, Natural)) = (C, Natural));
+    assert ((interval 0 1 (C, Natural)) = (C, Sharp));
+    assert ((interval 1 1 (B, Natural)) = (C, Natural));
+    assert ((interval (-1) (-1) (B, Natural)) = (A, Sharp));
+    assert ((minor_third_above (C, Natural)) = (E, Flat));
+    assert ((major_third_above (C, Natural)) = (E, Natural));
+    assert ((minor_third_below (C, Natural)) = (A, Natural));
+    assert ((major_third_below (C, Natural)) = (A, Flat));
+    assert ((major_third_below (D, Natural)) = (B, Flat));
+    assert ((minor_third_below (D, Natural)) = (B, Natural));
+    assert ((minor_third_above (E, Flat)) = (G, Flat));
+    assert ((major_third_above (E, Flat)) = (G, Natural));
+    assert ((minor_third_above (E, Natural)) = (G, Natural));
+    assert ((major_third_above (E, Natural)) = (G, Sharp));
+    assert ((minor_third_above (A, Flat)) = (C, Flat));
+    assert ((major_third_above (A, Flat)) = (C, Natural));
+    assert ((minor_third_above (A, Natural)) = (C, Natural));
+    assert ((major_third_above (A, Natural)) = (C, Sharp));
+    assert ((minor_third_above (A, Sharp)) = (C, Sharp));
+    assert ((perfect_fifth_below (B, Flat)) = (E, Flat));
+    assert ((perfect_fifth_above (B, Natural)) = (F, Sharp));
+    assert ((diminished_fifth_above (B, Natural)) = (F, Natural));
+    assert ((augmented_fifth_above (C, Natural)) = (G, Sharp));
 end
 
 module Duration = struct
@@ -80,8 +160,20 @@ module Note = struct
     Duration.render buffer duration
 end
 
-module Arpeggio = struct
+module Triad = struct
   type t = (Pitch.t * Pitch.t * Pitch.t)
+
+  let minor (pitch : Pitch.t) : t =
+    (pitch, Pitch.minor_third_above pitch, Pitch.perfect_fifth_above pitch)
+
+  let major (pitch : Pitch.t) : t =
+    (pitch, Pitch.major_third_above pitch, Pitch.perfect_fifth_above pitch)
+
+  let diminished (pitch : Pitch.t) : t =
+    (pitch, Pitch.minor_third_above pitch, Pitch.diminished_fifth_above pitch)
+
+  let augmented (pitch : Pitch.t) : t =
+    (pitch, Pitch.major_third_above pitch, Pitch.augmented_fifth_above pitch)
 end
 
 let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
@@ -89,6 +181,7 @@ let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
   Queue.iter (fun x -> Buffer.add_char buffer ' '; Note.render buffer x) notes
 
 let () : unit =
+  Pitch.test ();
   let notes : Note.t Queue.t = Queue.create () in
   List.iter
     (fun x -> Queue.add x notes)
