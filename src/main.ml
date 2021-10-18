@@ -12,6 +12,38 @@ module Tone = struct
        | E -> 'e'
        | F -> 'f'
        | G -> 'g')
+
+  let to_int : t -> int =
+    function
+    | A -> 0
+    | B -> 1
+    | C -> 2
+    | D -> 3
+    | E -> 4
+    | F -> 5
+    | G -> 6
+
+  let from_int (x : int) : t =
+    match (
+      if x < 0 then (
+        (x mod 7) + 7
+      ) else if 6 < x then (
+        x mod 7
+      ) else (
+        x
+      )
+    ) with
+    | 0 -> A
+    | 1 -> B
+    | 2 -> C
+    | 3 -> D
+    | 4 -> E
+    | 5 -> F
+    | 6 -> G
+    | _ -> exit 1
+
+  let interval (n : int) (x : t) : t =
+    from_int ((to_int x) + n)
 end
 
 module Accidental = struct
@@ -46,6 +78,10 @@ module Note = struct
     Tone.render buffer tone;
     Accidental.render buffer accidental;
     Duration.render buffer duration
+end
+
+module Arpeggio = struct
+  type t = (Pitch.t * Pitch.t * Pitch.t)
 end
 
 let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
