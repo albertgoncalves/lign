@@ -7,6 +7,7 @@ mkShell {
         ])
         feh
         lilypond
+        rlwrap
         shellcheck
         timidity
     ];
