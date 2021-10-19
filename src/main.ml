@@ -23,23 +23,23 @@ module Tone = struct
 
   let to_int : t -> int =
     function
-    | A -> 0
-    | B -> 1
-    | C -> 2
-    | D -> 3
-    | E -> 4
-    | F -> 5
-    | G -> 6
+    | A -> 5
+    | B -> 6
+    | C -> 0
+    | D -> 1
+    | E -> 2
+    | F -> 3
+    | G -> 4
 
   let from_int (x : int) : t =
     match modulo x 7 with
-    | 0 -> A
-    | 1 -> B
-    | 2 -> C
-    | 3 -> D
-    | 4 -> E
-    | 5 -> F
-    | 6 -> G
+    | 5 -> A
+    | 6 -> B
+    | 0 -> C
+    | 1 -> D
+    | 2 -> E
+    | 3 -> F
+    | 4 -> G
     | _ -> raise Exit
 
   let step (x : t) (n : int) : t =
@@ -59,21 +59,20 @@ end
 module Pitch = struct
   type t = (Tone.t * Accidental.t)
 
-  let to_int : t -> int =
-    function
-    | (C, Natural) -> 0
-    | (C, Sharp) | (D, Flat) -> 1
-    | (D, Natural) -> 2
-    | (D, Sharp) | (E, Flat) -> 3
-    | (E, Natural) | (F, Flat) -> 4
-    | (E, Sharp) | (F, Natural) -> 5
-    | (F, Sharp) | (G, Flat) -> 6
-    | (G, Natural) -> 7
-    | (G, Sharp) | (A, Flat) -> 8
-    | (A, Natural) -> 9
-    | (A, Sharp) | (B, Flat) -> 10
-    | (B, Natural) | (C, Flat) -> 11
-    | _ -> raise Exit
+  let to_int ((tone, accidental) : t) : int =
+    let n : int =
+      match tone with
+      | A -> 9
+      | B -> 11
+      | C -> 0
+      | D -> 2
+      | E -> 4
+      | F -> 5
+      | G -> 7 in
+    match accidental with
+    | Natural -> n
+    | Flat -> n - 1
+    | Sharp -> n + 1
 
   let interval (steps : int) (semitones : int) ((tone0, _) as pitch0 : t) : t =
     let semitones : int = modulo semitones 12 in
