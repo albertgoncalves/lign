@@ -145,7 +145,7 @@ module Octave = struct
 
   let render (buffer : Buffer.t) (octave : t) : unit =
     if octave < 0 then (
-      for _ = (-1) downto octave do
+      for _ = -1 downto octave do
         Buffer.add_char buffer ','
       done
     ) else if 0 < octave then (
