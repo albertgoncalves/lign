@@ -140,6 +140,23 @@ module Pitch = struct
     assert ((augmented_fifth_above (C, Natural)) = (G, Sharp));
 end
 
+module Octave = struct
+  type t = int
+
+  let render (buffer : Buffer.t) (octave : t) : unit =
+    if octave < 0 then (
+      for _ = (-1) downto octave do
+        Buffer.add_char buffer ','
+      done
+    ) else if 0 < octave then (
+      for _ = 1 to octave do
+        Buffer.add_char buffer '\''
+      done
+    ) else (
+      ()
+    )
+end
+
 module Duration = struct
   type t = Quarter | Eighth
 
@@ -152,11 +169,14 @@ module Duration = struct
 end
 
 module Note = struct
-  type t = (Pitch.t * Duration.t)
+  type t = (Pitch.t * Octave.t * Duration.t)
 
-  let render (buffer : Buffer.t) (((tone, accidental), duration) : t) : unit =
+  let render
+      (buffer : Buffer.t)
+      (((tone, accidental), octave, duration) : t) : unit =
     Tone.render buffer tone;
     Accidental.render buffer accidental;
+    Octave.render buffer octave;
     Duration.render buffer duration
 end
 
@@ -187,22 +207,25 @@ module Arpeggio = struct
         | 2 -> fifth
         | _ -> raise Exit)
 
-  let cycle (n : int) (x : t) (i : int) : (int * Pitch.t) =
-    let j : int = modulo (i + n) (Array.length x) in
-    (j, x.(j))
+  let cycle (n : int) (x : t) (i : int) : int =
+    modulo (i + n) (Array.length x)
 
-  let walk_down : t -> int -> (int * Pitch.t) =
-    cycle (-1)
-
-  let walk_up : t -> int -> (int * Pitch.t) =
-    cycle 1
-
-  let walk_random : t -> int -> (int * Pitch.t) =
+  let random_walk () : t -> int -> int =
     if Random.bool () then
-      walk_down
+      cycle (-1)
     else
-      walk_up
+      cycle 1
 end
+
+let generate
+    (notes : Note.t Queue.t)
+    (arpeggio : Arpeggio.t)
+    (n : int) : unit =
+  let i : int ref = ref (Random.int (Array.length arpeggio)) in
+  for _ = 1 to n do
+    Queue.add (arpeggio.(!i), 1, Duration.Eighth) notes;
+    i := Arpeggio.random_walk () arpeggio (!i)
+  done
 
 let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
   Note.render buffer (Queue.take notes);
@@ -210,21 +233,6 @@ let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
 
 let () : unit =
   Pitch.test ();
-  let notes : Note.t Queue.t = Queue.create () in
-  List.iter
-    (fun x -> Queue.add x notes)
-    [
-      ((G, Sharp), Quarter);
-      ((F, Natural), Quarter);
-      ((G, Natural), Quarter);
-      ((A, Sharp), Eighth);
-      ((B, Natural), Eighth);
-      ((C, Sharp), Quarter);
-      ((E, Natural), Quarter);
-      ((F, Natural), Eighth);
-      ((E, Flat), Eighth);
-      ((E, Natural), Quarter);
-    ];
   let buffer : Buffer.t = Buffer.create (1 lsl 7) in
   Buffer.add_string buffer {|\version "2.22.1"
 #(set-global-staff-size 28)
@@ -236,11 +244,16 @@ let () : unit =
   bookTitleMarkup = ##f
   scoreTitleMarkup = ##f
 }
-melody = \relative c'' {
+melody = {
   \clef treble
   \time 4/4
   |};
-  render buffer notes;
+  (
+    Random.self_init ();
+    let notes : Note.t Queue.t = Queue.create () in
+    generate notes (Arpeggio.from_triad (Triad.minor (F, Sharp))) 16;
+    render buffer notes;
+  );
   Buffer.add_string buffer {|
 }
 \score {
