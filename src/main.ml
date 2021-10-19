@@ -217,16 +217,6 @@ module Arpeggio = struct
       cycle 1
 end
 
-let generate
-    (notes : Note.t Queue.t)
-    (arpeggio : Arpeggio.t)
-    (n : int) : unit =
-  let i : int ref = ref (Random.int (Array.length arpeggio)) in
-  for _ = 1 to n do
-    Queue.add (arpeggio.(!i), 1, Duration.Eighth) notes;
-    i := Arpeggio.random_walk () arpeggio (!i)
-  done
-
 let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
   Note.render buffer (Queue.take notes);
   Queue.iter (fun x -> Buffer.add_char buffer ' '; Note.render buffer x) notes
@@ -251,7 +241,18 @@ melody = {
   (
     Random.self_init ();
     let notes : Note.t Queue.t = Queue.create () in
-    generate notes (Arpeggio.from_triad (Triad.minor (F, Sharp))) 16;
+    (
+      let arpeggio : Arpeggio.t =
+        Arpeggio.from_triad (Triad.minor (F, Sharp)) in
+      let octave : Octave.t = 1 in
+      let duration : Duration.t = Quarter in
+      let n : int = 12 in
+      let i : int ref = ref (Random.int (Array.length arpeggio)) in
+      for _ = 1 to n do
+        Queue.add (arpeggio.(!i), octave, duration) notes;
+        i := Arpeggio.random_walk () arpeggio (!i)
+      done
+    );
     render buffer notes;
   );
   Buffer.add_string buffer {|
