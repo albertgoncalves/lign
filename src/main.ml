@@ -42,7 +42,7 @@ module Tone = struct
     | 6 -> G
     | _ -> raise Exit
 
-  let step (n : int) (x : t) : t =
+  let step (x : t) (n : int) : t =
     from_int ((to_int x) + n)
 end
 
@@ -77,7 +77,7 @@ module Pitch = struct
 
   let interval (steps : int) (semitones : int) ((tone0, _) as pitch0 : t) : t =
     let semitones : int = modulo semitones 12 in
-    let tone1 : Tone.t = Tone.from_int ((Tone.to_int tone0) + steps) in
+    let tone1 : Tone.t = Tone.step tone0 steps in
     let pitch1 : t = (tone1, Natural) in
     let n : int = modulo ((to_int pitch1) - (to_int pitch0)) 12 in
     if semitones = n then
