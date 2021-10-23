@@ -10,6 +10,10 @@ type abs_pitch = (pitch * octave)
 
 type duration = Quarter | Eighth
 
+type chord = pitch array
+
+type sound = (abs_pitch * duration)
+
 let pitch_to_int ((n, a) : pitch) : int =
   let x : int =
     match n with
@@ -49,10 +53,7 @@ let nearest_pitch (p0 : pitch) (ps : pitch list) : pitch =
   |> List.hd
   |> snd
 
-let rec nearest_abs_pitch
-    (n : int)
-    (p : pitch)
-    (o : octave) : abs_pitch =
+let rec nearest_abs_pitch (n : int) (p : pitch) (o : octave) : abs_pitch =
   let d : int = n - (abs_pitch_to_int (p, o)) in
   if (abs d) < 7 then
     (p, o)
@@ -79,32 +80,29 @@ let modulo (x : int) (n : int) : int =
   else
     x
 
-let step_up (from : int) (xs : 'a array) : int =
-  modulo (from + 1) (Array.length xs)
-
-let step_down (from : int) (xs : 'a array) : int =
-  modulo (from - 1) (Array.length xs)
+let step_by (i : int) (n : int) (xs : 'a array) : int =
+  modulo (i + n) (Array.length xs)
 
 let get_arpeggio
     (l : int)
     (u : int)
-    (ps : pitch array)
-    (ap0 : abs_pitch) : (abs_pitch * (abs_pitch * duration) Queue.t) =
-  let ((p1, o1) as ap1) : abs_pitch = get_first ap0 (Array.to_list ps) in
-  let xs : (abs_pitch * duration) Queue.t = Queue.create () in
+    (c : chord)
+    (ap0 : abs_pitch) : (abs_pitch * sound Queue.t) =
+  let ((p1, o1) as ap1) : abs_pitch = get_first ap0 (Array.to_list c) in
+  let xs : sound Queue.t = Queue.create () in
   let ds : duration Queue.t = get_durations () in
   Queue.add (ap1, Queue.take ds) xs;
-  let i : int ref = ref (lookup p1 ps) in
+  let i : int ref = ref (lookup p1 c) in
   let ap2 : abs_pitch ref = ref ap1 in
   let o2 : octave ref = ref o1 in
   let f (d : duration) : unit =
     let j : int =
       if Random.bool () then
-        step_up (!i) ps
+        step_by (!i) 1 c
       else
-        step_down (!i) ps in
+        step_by (!i) (-1) c in
     let ((p3, o3) as ap3) : abs_pitch =
-      nearest_abs_pitch (abs_pitch_to_int (!ap2)) ps.(j) (!o2) in
+      nearest_abs_pitch (abs_pitch_to_int (!ap2)) c.(j) (!o2) in
     let ap3 : abs_pitch =
       let n : int = abs_pitch_to_int ap3 in
       if n < l then
@@ -127,22 +125,20 @@ let get_arpeggio
   Queue.iter f ds;
   (!ap2, xs)
 
-let rec render_octave (buffer : Buffer.t) (o : octave) : unit =
+let rec render_octave (b : Buffer.t) (o : octave) : unit =
   if 0 < o then (
-    Buffer.add_char buffer '\'';
-    render_octave buffer (o - 1)
+    Buffer.add_char b '\'';
+    render_octave b (o - 1)
   ) else if o < 0 then (
-    Buffer.add_char buffer ',';
-    render_octave buffer (o + 1)
+    Buffer.add_char b ',';
+    render_octave b (o + 1)
   ) else (
     ()
   )
 
-let render
-    (buffer : Buffer.t)
-    ((((n, a), o), d) : (abs_pitch * duration)) : unit =
-  Buffer.add_char buffer ' ';
-  Buffer.add_char buffer
+let render_sound (b : Buffer.t) ((((n, a), o), d) : sound) : unit =
+  Buffer.add_char b ' ';
+  Buffer.add_char b
     (match n with
      | C -> 'c'
      | D -> 'd'
@@ -152,31 +148,31 @@ let render
      | A -> 'a'
      | B -> 'b');
   (match a with
-   | Flat -> Buffer.add_string buffer "es"
+   | Flat -> Buffer.add_string b "es"
    | Natural -> ()
-   | Sharp -> Buffer.add_string buffer "is");
-  render_octave buffer o;
-  Buffer.add_char buffer
+   | Sharp -> Buffer.add_string b "is");
+  render_octave b o;
+  Buffer.add_char b
     (match d with
      | Quarter -> '4'
      | Eighth -> '8')
 
 let set_arpeggios
+    (ap0 : abs_pitch)
     (l : int)
     (u : int)
-    (buffer : Buffer.t)
-    (xs : pitch array list) : unit =
+    (b : Buffer.t)
+    (cs : chord list) : unit =
   let f
-      ((ap0, qs0) : (abs_pitch * (abs_pitch * duration) Queue.t))
-      (ps : pitch array) : (abs_pitch * (abs_pitch * duration) Queue.t) =
-    let (ap1, qs1) : (abs_pitch * (abs_pitch * duration) Queue.t) =
-      get_arpeggio l u ps ap0 in
-    Queue.transfer qs1 qs0;
-    (ap1, qs0) in
-  xs
-  |> List.fold_left f (((C, Natural), 1), Queue.create ())
+      ((ap1, ps1) : (abs_pitch * sound Queue.t))
+      (c : chord) : (abs_pitch * sound Queue.t) =
+    let (ap2, ps2) : (abs_pitch * sound Queue.t) = get_arpeggio l u c ap1 in
+    Queue.transfer ps2 ps1;
+    (ap2, ps1) in
+  cs
+  |> List.fold_left f (ap0, Queue.create ())
   |> snd
-  |> Queue.iter (render buffer)
+  |> Queue.iter (render_sound b)
 
 let tests () : unit =
   assert
@@ -194,20 +190,9 @@ let tests () : unit =
      ((C, Natural), 0))
 
 let () : unit =
-  Random.self_init ();
   tests ();
-  let buffer : Buffer.t = Buffer.create (1 lsl 10) in
-  let xs : pitch array list =
-    [
-      [|(B, Flat); (D, Natural); (F, Natural)|];
-      [|(D, Natural); (F, Sharp); (A, Natural)|];
-      [|(F, Sharp); (A, Sharp); (C, Sharp)|];
-      [|(B, Flat); (D, Flat); (F, Natural)|];
-      [|(E, Flat); (G, Natural); (B, Flat)|];
-      [|(G, Natural); (B, Natural); (D, Natural)|];
-      [|(B, Natural); (D, Sharp); (F, Sharp)|];
-    ] in
-  Buffer.add_string buffer {|\version "2.22.1"
+  let b : Buffer.t = Buffer.create (1 lsl 10) in
+  Buffer.add_string b {|\version "2.22.1"
 #(set-global-staff-size 28)
 \paper {
   indent = 0\mm
@@ -222,8 +207,21 @@ melody = {
   \time 4/4
   \tempo 4 = 120
   |};
-  set_arpeggios 4 33 buffer xs;
-  Buffer.add_string buffer {|
+  (
+    let cs : chord list =
+      [
+        [|(B, Flat); (D, Natural); (F, Natural)|];
+        [|(D, Natural); (F, Sharp); (A, Natural)|];
+        [|(F, Sharp); (A, Sharp); (C, Sharp)|];
+        [|(B, Flat); (D, Flat); (F, Natural)|];
+        [|(E, Flat); (G, Natural); (B, Flat)|];
+        [|(G, Natural); (B, Natural); (D, Natural)|];
+        [|(B, Natural); (D, Sharp); (F, Sharp)|];
+      ] in
+    Random.self_init ();
+    set_arpeggios ((C, Natural), 1) 4 33 b cs;
+  );
+  Buffer.add_string b {|
 }
 \score {
   \new Staff \melody
@@ -232,10 +230,10 @@ melody = {
 }
 |};
   if (Array.length Sys.argv) < 2 then (
-    Buffer.output_buffer stdout buffer;
+    Buffer.output_buffer stdout b;
     flush stdout
   ) else (
     let channel : out_channel = open_out Sys.argv.(1) in
-    Buffer.output_buffer channel buffer;
+    Buffer.output_buffer channel b;
     close_out channel
   )
