@@ -1,4 +1,77 @@
-let modulo (x : int) (n : int) =
+type note = C | D | E | F | G | A | B
+
+type accidental = Flat | Natural | Sharp
+
+type pitch = (note * accidental)
+
+type octave = int
+
+type abs_pitch = (pitch * octave)
+
+type duration = Quarter | Eighth
+
+let pitch_to_int ((n, a) : pitch) : int =
+  let x : int =
+    match n with
+    | C -> 0
+    | D -> 2
+    | E -> 4
+    | F -> 5
+    | G -> 7
+    | A -> 9
+    | B -> 11 in
+  match a with
+  | Flat -> x - 1
+  | Natural -> x
+  | Sharp -> x + 1
+
+let abs_pitch_to_int ((p, o): abs_pitch) : int =
+  (pitch_to_int p) + (o * 12)
+
+let get_durations () : duration Queue.t =
+  let ds : duration Queue.t = Queue.create () in
+  for _ = 0 to 3 do
+    if Random.bool () then (
+      Queue.add Eighth ds;
+      Queue.add Eighth ds;
+    ) else (
+      Queue.add Quarter ds;
+    )
+  done;
+  ds
+
+let nearest_pitch (p0 : pitch) (ps : pitch list) : pitch =
+  let n : int = pitch_to_int p0 in
+  ps
+  |> List.map (fun p1 -> (abs ((pitch_to_int p1) - n), p1))
+  |> List.filter (fun (d, _) -> d <> 0)
+  |> List.sort (fun (a, _) (b, _) -> compare a b)
+  |> List.hd
+  |> snd
+
+let rec nearest_abs_pitch
+    (n : int)
+    (p : pitch)
+    (o : octave) : abs_pitch =
+  let d : int = n - (abs_pitch_to_int (p, o)) in
+  if (abs d) < 7 then
+    (p, o)
+  else if d < 0 then
+    nearest_abs_pitch n p (o - 1)
+  else
+    nearest_abs_pitch n p (o + 1)
+
+let get_first ((p, o) as ap : abs_pitch) (ps : pitch list) : abs_pitch =
+  nearest_abs_pitch (abs_pitch_to_int ap) (nearest_pitch p ps) o
+
+let lookup (x : 'a) (xs : 'a array) : int =
+  let i : int ref = ref 0 in
+  while xs.(!i) <> x do
+    incr i;
+  done;
+  !i
+
+let modulo (x : int) (n : int) : int =
   if x < 0 then
     (x mod n) + n
   else if n <= x then
@@ -6,223 +79,134 @@ let modulo (x : int) (n : int) =
   else
     x
 
-module Tone = struct
-  type t = A | B | C | D | E | F | G
+let step_up (from : int) (xs : 'a array) : int =
+  modulo (from + 1) (Array.length xs)
 
-  let render (buffer : Buffer.t) (tone : t) : unit =
-    Buffer.add_char
-      buffer
-      (match tone with
-       | A -> 'a'
-       | B -> 'b'
-       | C -> 'c'
-       | D -> 'd'
-       | E -> 'e'
-       | F -> 'f'
-       | G -> 'g')
+let step_down (from : int) (xs : 'a array) : int =
+  modulo (from - 1) (Array.length xs)
 
-  let to_int : t -> int =
-    function
-    | A -> 5
-    | B -> 6
-    | C -> 0
-    | D -> 1
-    | E -> 2
-    | F -> 3
-    | G -> 4
+let get_arpeggio
+    (l : int)
+    (u : int)
+    (ps : pitch array)
+    (ap0 : abs_pitch) : (abs_pitch * (abs_pitch * duration) Queue.t) =
+  let ((p1, o1) as ap1) : abs_pitch = get_first ap0 (Array.to_list ps) in
+  let xs : (abs_pitch * duration) Queue.t = Queue.create () in
+  let ds : duration Queue.t = get_durations () in
+  Queue.add (ap1, Queue.take ds) xs;
+  let i : int ref = ref (lookup p1 ps) in
+  let ap2 : abs_pitch ref = ref ap1 in
+  let o2 : octave ref = ref o1 in
+  let f (d : duration) : unit =
+    let j : int =
+      if Random.bool () then
+        step_up (!i) ps
+      else
+        step_down (!i) ps in
+    let ((p3, o3) as ap3) : abs_pitch =
+      nearest_abs_pitch (abs_pitch_to_int (!ap2)) ps.(j) (!o2) in
+    let ap3 : abs_pitch =
+      let n : int = abs_pitch_to_int ap3 in
+      if n < l then
+        (p3, o3 + 1)
+      else if u < n then
+        (p3, o3 - 1)
+      else
+        ap3 in
+    (
+      let n : int = abs_pitch_to_int ap3 in
+      assert (l <= n);
+      assert (n <= u);
+    );
+    (
+      Queue.add (ap3, d) xs;
+      ap2 := ap3;
+      o2 := o3;
+      i := j;
+    ) in
+  Queue.iter f ds;
+  (!ap2, xs)
 
-  let from_int (x : int) : t =
-    match modulo x 7 with
-    | 5 -> A
-    | 6 -> B
-    | 0 -> C
-    | 1 -> D
-    | 2 -> E
-    | 3 -> F
-    | 4 -> G
-    | _ -> raise Exit
+let rec render_octave (buffer : Buffer.t) (o : octave) : unit =
+  if 0 < o then (
+    Buffer.add_char buffer '\'';
+    render_octave buffer (o - 1)
+  ) else if o < 0 then (
+    Buffer.add_char buffer ',';
+    render_octave buffer (o + 1)
+  ) else (
+    ()
+  )
 
-  let step (x : t) (n : int) : t =
-    from_int ((to_int x) + n)
-end
+let render
+    (buffer : Buffer.t)
+    ((((n, a), o), d) : (abs_pitch * duration)) : unit =
+  Buffer.add_char buffer ' ';
+  Buffer.add_char buffer
+    (match n with
+     | C -> 'c'
+     | D -> 'd'
+     | E -> 'e'
+     | F -> 'f'
+     | G -> 'g'
+     | A -> 'a'
+     | B -> 'b');
+  (match a with
+   | Flat -> Buffer.add_string buffer "es"
+   | Natural -> ()
+   | Sharp -> Buffer.add_string buffer "is");
+  render_octave buffer o;
+  Buffer.add_char buffer
+    (match d with
+     | Quarter -> '4'
+     | Eighth -> '8')
 
-module Accidental = struct
-  type t = Flat | Natural | Sharp
+let set_arpeggios
+    (l : int)
+    (u : int)
+    (buffer : Buffer.t)
+    (xs : pitch array list) : unit =
+  let f
+      ((ap0, qs0) : (abs_pitch * (abs_pitch * duration) Queue.t))
+      (ps : pitch array) : (abs_pitch * (abs_pitch * duration) Queue.t) =
+    let (ap1, qs1) : (abs_pitch * (abs_pitch * duration) Queue.t) =
+      get_arpeggio l u ps ap0 in
+    Queue.transfer qs1 qs0;
+    (ap1, qs0) in
+  xs
+  |> List.fold_left f (((C, Natural), 1), Queue.create ())
+  |> snd
+  |> Queue.iter (render buffer)
 
-  let render (buffer : Buffer.t) : t -> unit =
-    function
-    | Flat -> Buffer.add_string buffer "es"
-    | Natural -> ()
-    | Sharp -> Buffer.add_string buffer "is"
-end
-
-module Pitch = struct
-  type t = (Tone.t * Accidental.t)
-
-  let to_int ((tone, accidental) : t) : int =
-    let n : int =
-      match tone with
-      | A -> 9
-      | B -> 11
-      | C -> 0
-      | D -> 2
-      | E -> 4
-      | F -> 5
-      | G -> 7 in
-    match accidental with
-    | Natural -> n
-    | Flat -> n - 1
-    | Sharp -> n + 1
-
-  let interval (steps : int) (semitones : int) ((tone0, _) as pitch0 : t) : t =
-    let semitones : int = modulo semitones 12 in
-    let tone1 : Tone.t = Tone.step tone0 steps in
-    let pitch1 : t = (tone1, Natural) in
-    let n : int = modulo ((to_int pitch1) - (to_int pitch0)) 12 in
-    if semitones = n then
-      pitch1
-    else if (modulo (semitones + 1) 12) = n then
-      (tone1, Flat)
-    else if (modulo (semitones - 1) 12) = n then
-      (tone1, Sharp)
-    else
-      raise Exit
-
-  let minor_third_below : t -> t =
-    interval (-2) (-3)
-
-  let minor_third_above : t -> t =
-    interval 2 3
-
-  let major_third_below : t -> t =
-    interval (-2) (-4)
-
-  let major_third_above : t -> t =
-    interval 2 4
-
-  let perfect_fifth_below : t -> t =
-    interval (-4) (-7)
-
-  let perfect_fifth_above : t -> t =
-    interval 4 7
-
-  let diminished_fifth_above : t -> t =
-    interval 4 6
-
-  let augmented_fifth_above : t -> t =
-    interval 4 8
-
-  let test () : unit =
-    assert ((interval 0 (-1) (C, Natural)) = (C, Flat));
-    assert ((interval 0 0 (C, Natural)) = (C, Natural));
-    assert ((interval 0 1 (C, Natural)) = (C, Sharp));
-    assert ((interval 1 1 (B, Natural)) = (C, Natural));
-    assert ((interval (-1) (-1) (B, Natural)) = (A, Sharp));
-    assert ((minor_third_above (C, Natural)) = (E, Flat));
-    assert ((major_third_above (C, Natural)) = (E, Natural));
-    assert ((minor_third_below (C, Natural)) = (A, Natural));
-    assert ((major_third_below (C, Natural)) = (A, Flat));
-    assert ((major_third_below (D, Natural)) = (B, Flat));
-    assert ((minor_third_below (D, Natural)) = (B, Natural));
-    assert ((minor_third_above (E, Flat)) = (G, Flat));
-    assert ((major_third_above (E, Flat)) = (G, Natural));
-    assert ((minor_third_above (E, Natural)) = (G, Natural));
-    assert ((major_third_above (E, Natural)) = (G, Sharp));
-    assert ((minor_third_above (A, Flat)) = (C, Flat));
-    assert ((major_third_above (A, Flat)) = (C, Natural));
-    assert ((minor_third_above (A, Natural)) = (C, Natural));
-    assert ((major_third_above (A, Natural)) = (C, Sharp));
-    assert ((minor_third_above (A, Sharp)) = (C, Sharp));
-    assert ((perfect_fifth_below (B, Flat)) = (E, Flat));
-    assert ((perfect_fifth_above (B, Natural)) = (F, Sharp));
-    assert ((diminished_fifth_above (B, Natural)) = (F, Natural));
-    assert ((augmented_fifth_above (C, Natural)) = (G, Sharp));
-end
-
-module Octave = struct
-  type t = int
-
-  let render (buffer : Buffer.t) (octave : t) : unit =
-    if octave < 0 then (
-      for _ = -1 downto octave do
-        Buffer.add_char buffer ','
-      done
-    ) else if 0 < octave then (
-      for _ = 1 to octave do
-        Buffer.add_char buffer '\''
-      done
-    ) else (
-      ()
-    )
-end
-
-module Duration = struct
-  type t = Quarter | Eighth
-
-  let render (buffer : Buffer.t) (duration : t) : unit =
-    Buffer.add_char
-      buffer
-      (match duration with
-       | Quarter -> '4'
-       | Eighth -> '8')
-end
-
-module Note = struct
-  type t = (Pitch.t * Octave.t * Duration.t)
-
-  let render
-      (buffer : Buffer.t)
-      (((tone, accidental), octave, duration) : t) : unit =
-    Tone.render buffer tone;
-    Accidental.render buffer accidental;
-    Octave.render buffer octave;
-    Duration.render buffer duration
-end
-
-module Triad = struct
-  type t = (Pitch.t * Pitch.t * Pitch.t)
-
-  let minor (pitch : Pitch.t) : t =
-    (pitch, Pitch.minor_third_above pitch, Pitch.perfect_fifth_above pitch)
-
-  let major (pitch : Pitch.t) : t =
-    (pitch, Pitch.major_third_above pitch, Pitch.perfect_fifth_above pitch)
-
-  let diminished (pitch : Pitch.t) : t =
-    (pitch, Pitch.minor_third_above pitch, Pitch.diminished_fifth_above pitch)
-
-  let augmented (pitch : Pitch.t) : t =
-    (pitch, Pitch.major_third_above pitch, Pitch.augmented_fifth_above pitch)
-end
-
-module Arpeggio = struct
-  type t = Pitch.t array
-
-  let from_triad ((root, third, fifth) : Triad.t) : t =
-    Array.init 3
-      (function
-        | 0 -> root
-        | 1 -> third
-        | 2 -> fifth
-        | _ -> raise Exit)
-
-  let cycle (n : int) (x : t) (i : int) : int =
-    modulo (i + n) (Array.length x)
-
-  let random_walk () : t -> int -> int =
-    if Random.bool () then
-      cycle (-1)
-    else
-      cycle 1
-end
-
-let render (buffer : Buffer.t) (notes : Note.t Queue.t) : unit =
-  Note.render buffer (Queue.take notes);
-  Queue.iter (fun x -> Buffer.add_char buffer ' '; Note.render buffer x) notes
+let tests () : unit =
+  assert
+    ((nearest_pitch (D, Flat) [(C, Natural); (E, Natural)]) = (C, Natural));
+  assert
+    ((nearest_pitch (D, Sharp) [(C, Natural); (E, Natural)]) = (E, Natural));
+  assert
+    ((nearest_pitch (D, Natural) [(B, Flat); (C, Natural); (D, Natural)]) =
+     (C, Natural));
+  assert
+    (((nearest_abs_pitch (abs_pitch_to_int ((B, Flat), 1)) (C, Natural) 0)) =
+     ((C, Natural), 2));
+  assert
+    (((nearest_abs_pitch (abs_pitch_to_int ((F, Sharp), -1)) (C, Natural) 1)) =
+     ((C, Natural), 0))
 
 let () : unit =
-  Pitch.test ();
-  let buffer : Buffer.t = Buffer.create (1 lsl 7) in
+  Random.self_init ();
+  tests ();
+  let buffer : Buffer.t = Buffer.create (1 lsl 10) in
+  let xs : pitch array list =
+    [
+      [|(B, Flat); (D, Natural); (F, Natural)|];
+      [|(D, Natural); (F, Sharp); (A, Natural)|];
+      [|(F, Sharp); (A, Sharp); (C, Sharp)|];
+      [|(B, Flat); (D, Flat); (F, Natural)|];
+      [|(E, Flat); (G, Natural); (B, Flat)|];
+      [|(G, Natural); (B, Natural); (D, Natural)|];
+      [|(B, Natural); (D, Sharp); (F, Sharp)|];
+    ] in
   Buffer.add_string buffer {|\version "2.22.1"
 #(set-global-staff-size 28)
 \paper {
@@ -236,24 +220,9 @@ let () : unit =
 melody = {
   \clef treble
   \time 4/4
+  \tempo 4 = 120
   |};
-  (
-    Random.self_init ();
-    let notes : Note.t Queue.t = Queue.create () in
-    (
-      let arpeggio : Arpeggio.t =
-        Arpeggio.from_triad (Triad.minor (F, Sharp)) in
-      let octave : Octave.t = 1 in
-      let duration : Duration.t = Quarter in
-      let n : int = 12 in
-      let i : int ref = ref (Random.int (Array.length arpeggio)) in
-      for _ = 1 to n do
-        Queue.add (arpeggio.(!i), octave, duration) notes;
-        i := Arpeggio.random_walk () arpeggio (!i)
-      done
-    );
-    render buffer notes;
-  );
+  set_arpeggios 4 33 buffer xs;
   Buffer.add_string buffer {|
 }
 \score {
