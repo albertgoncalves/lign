@@ -219,21 +219,21 @@ let () : unit =
 melody = {
   \clef treble
   \time 4/4
-  \tempo 4 = 120
+  \tempo 4 = 50
   |};
   (
     let cs : chord list =
       [
-        [|(B, Flat); (D, Natural); (F, Natural)|];
-        [|(D, Natural); (F, Sharp); (A, Natural)|];
-        [|(F, Sharp); (A, Sharp); (C, Sharp)|];
         [|(B, Flat); (D, Flat); (F, Natural)|];
         [|(E, Flat); (G, Natural); (B, Flat)|];
         [|(G, Natural); (B, Natural); (D, Natural)|];
         [|(B, Natural); (D, Sharp); (F, Sharp)|];
+        [|(B, Flat); (D, Natural); (F, Natural)|];
+        [|(D, Natural); (F, Sharp); (A, Natural)|];
+        [|(F, Sharp); (A, Sharp); (C, Sharp)|];
       ] in
     Random.self_init ();
-    set_arpeggios ((C, Natural), 1) 4 33 b cs;
+    set_arpeggios ((C, Natural), 2) 7 33 b cs;
   );
   Buffer.add_string b {|
 }

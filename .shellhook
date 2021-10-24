@@ -16,7 +16,7 @@ score () {
     lilypond -o "$WD/out" -dbackend=eps -ddelete-intermediate-files \
         -dinclude-eps-fonts -dno-gs-load-fonts -dpixmap-format=pngalpha --png \
         "$1" && \
-    feh -B white "$WD/out/$(handle "$1").png"
+    feh -B gray "$WD/out/$(handle "$1").png"
 }
 
 midi () {
