@@ -89,6 +89,20 @@ let get_arpeggio
     (c : chord)
     (ap0 : abs_pitch) : (abs_pitch * sound Queue.t) =
   let ((p1, o1) as ap1) : abs_pitch = get_first ap0 (Array.to_list c) in
+  let o1 : octave =
+    let n : int = abs_pitch_to_int ap1 in
+    if n < l then
+      o1 + 1
+    else if u < n then
+      o1 - 1
+    else
+      o1 in
+  let ap1 : abs_pitch = (p1, o1) in
+  (
+    let n : int = abs_pitch_to_int ap1 in
+    assert (l <= n);
+    assert (n <= u);
+  );
   let xs : sound Queue.t = Queue.create () in
   let ds : duration Queue.t = get_durations () in
   Queue.add (ap1, Queue.take ds) xs;
