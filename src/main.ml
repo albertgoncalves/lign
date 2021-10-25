@@ -200,8 +200,7 @@ let tests () : unit =
   assert
     ((nearest_pitch (D, Sharp) [(C, Natural); (E, Natural)]) = (E, Natural));
   assert
-    ((nearest_pitch (B, Natural) [(A, Flat); (C, Natural)]) =
-     (C, Natural));
+    ((nearest_pitch (B, Natural) [(A, Flat); (C, Natural)]) = (C, Natural));
   assert
     ((nearest_pitch (D, Natural) [(B, Flat); (C, Natural); (D, Natural)]) =
      (C, Natural));
