@@ -152,8 +152,6 @@ let rec render_octave (b : Buffer.t) (o : octave) : unit =
   ) else if o < 0 then (
     Buffer.add_char b ',';
     render_octave b (o + 1)
-  ) else (
-    ()
   )
 
 let render_sound (b : Buffer.t) ((((n, a), o), d) : sound) : unit =
