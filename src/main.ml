@@ -45,9 +45,15 @@ let get_durations () : duration Queue.t =
   ds
 
 let nearest_pitch (p0 : pitch) (ps : pitch list) : pitch =
+  let f (a : int) (b : int) : int =
+    let n : int = abs (a - b) in
+    if n < 7 then
+      n
+    else
+      12 - n in
   let n : int = pitch_to_int p0 in
   ps
-  |> List.map (fun p1 -> (abs ((pitch_to_int p1) - n), p1))
+  |> List.map (fun p1 -> (f (pitch_to_int p1) n, p1))
   |> List.filter (fun (d, _) -> d <> 0)
   |> List.sort (fun (a, _) (b, _) -> compare a b)
   |> List.hd
@@ -193,6 +199,9 @@ let tests () : unit =
     ((nearest_pitch (D, Flat) [(C, Natural); (E, Natural)]) = (C, Natural));
   assert
     ((nearest_pitch (D, Sharp) [(C, Natural); (E, Natural)]) = (E, Natural));
+  assert
+    ((nearest_pitch (B, Natural) [(A, Flat); (C, Natural)]) =
+     (C, Natural));
   assert
     ((nearest_pitch (D, Natural) [(B, Flat); (C, Natural); (D, Natural)]) =
      (C, Natural));
