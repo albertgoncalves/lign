@@ -219,7 +219,7 @@ let () : unit =
 #(set-global-staff-size 28)
 \paper {
   indent = 0\mm
-  line-width = 140\mm
+  line-width = 150\mm
   oddFooterMarkup = ##f
   oddHeaderMarkup = ##f
   bookTitleMarkup = ##f
