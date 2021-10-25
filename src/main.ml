@@ -145,14 +145,15 @@ let get_arpeggio
   Queue.iter f ds;
   (!ap2, xs)
 
-let rec render_octave (b : Buffer.t) (o : octave) : unit =
-  if 0 < o then (
-    Buffer.add_char b '\'';
-    render_octave b (o - 1)
-  ) else if o < 0 then (
-    Buffer.add_char b ',';
-    render_octave b (o + 1)
-  )
+let render_octave (b : Buffer.t) (o : octave) : unit =
+  if o < 0 then
+    for _ = -1 downto o do
+      Buffer.add_char b ','
+    done
+  else
+    for _ = 1 to o do
+      Buffer.add_char b '\''
+    done
 
 let render_sound (b : Buffer.t) ((((n, a), o), d) : sound) : unit =
   Buffer.add_char b ' ';
