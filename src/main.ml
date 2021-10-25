@@ -240,7 +240,7 @@ melody = {
         [|(E, Flat); (G, Natural); (B, Flat)|];
         [|(G, Natural); (B, Natural); (D, Natural)|];
         [|(B, Natural); (D, Sharp); (F, Sharp)|];
-        [|(A, Flat); (C, Natural); (E, Flat)|];
+        [|(G, Sharp); (B, Natural); (D, Sharp)|];
       ] in
     set_arpeggios ((C, Natural), 2) 7 33 b cs;
   );
