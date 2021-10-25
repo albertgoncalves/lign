@@ -231,6 +231,7 @@ melody = {
   \tempo 4 = 50
   |};
   (
+    Random.self_init ();
     let cs : chord list =
       [
         [|(B, Flat); (D, Natural); (F, Natural)|];
@@ -240,8 +241,8 @@ melody = {
         [|(E, Flat); (G, Natural); (B, Flat)|];
         [|(G, Natural); (B, Natural); (D, Natural)|];
         [|(B, Natural); (D, Sharp); (F, Sharp)|];
+        [|(A, Flat); (C, Natural); (E, Flat)|];
       ] in
-    Random.self_init ();
     set_arpeggios ((C, Natural), 2) 7 33 b cs;
   );
   Buffer.add_string b {|
