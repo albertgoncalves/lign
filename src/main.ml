@@ -1,6 +1,6 @@
 type note = C | D | E | F | G | A | B
 
-type accidental = Flat | Natural | Sharp
+type accidental = DoubleFlat | Flat | Natural | Sharp
 
 type pitch = (note * accidental)
 
@@ -25,6 +25,7 @@ let pitch_to_int ((n, a) : pitch) : int =
     | A -> 9
     | B -> 11 in
   match a with
+  | DoubleFlat -> x - 2
   | Flat -> x - 1
   | Natural -> x
   | Sharp -> x + 1
@@ -167,6 +168,7 @@ let render_sound (b : Buffer.t) ((((n, a), o), d) : sound) : unit =
      | A -> 'a'
      | B -> 'b');
   (match a with
+   | DoubleFlat -> Buffer.add_string b "eses"
    | Flat -> Buffer.add_string b "es"
    | Natural -> ()
    | Sharp -> Buffer.add_string b "is");
