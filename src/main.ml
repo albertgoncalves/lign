@@ -229,21 +229,47 @@ melody = {
   \clef treble
   \time 4/4
   \tempo 4 = 50
+  \key d \minor
   |};
   (
     Random.self_init ();
+    let d_m : pitch array =
+      [|(D, Natural); (F, Natural); (A, Natural)|] in
+    let g_m7 : pitch array =
+      [|(G, Natural); (B, Flat); (D, Natural); (F, Natural)|] in
+    let c_7 : pitch array =
+      [|(C, Natural); (E, Natural); (G, Natural); (B, Flat)|] in
+    let ees_m7b5 : pitch array =
+      [|(E, Flat); (G, Flat); (B, DoubleFlat); (D, Flat)|] in
+    let a_7s5s9 : pitch array =
+      [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural); (B, Sharp)|] in
+    let f_m7 : pitch array =
+      [|(F, Natural); (A, Flat); (C, Natural); (E, Flat)|] in
+    let bes_7 : pitch array =
+      [|(B, Flat); (D, Natural); (F, Natural); (A, Flat)|] in
+    let ees_maj7 : pitch array =
+      [|(E, Flat); (G, Natural); (B, Flat); (D, Natural)|] in
+    let a_7s5 : pitch array =
+      [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural)|] in
     let cs : chord list =
       [
-        [|(B, Flat); (D, Natural); (F, Natural)|];
-        [|(D, Natural); (F, Sharp); (A, Natural)|];
-        [|(F, Sharp); (A, Sharp); (C, Sharp)|];
-        [|(B, Flat); (D, Flat); (F, Natural)|];
-        [|(E, Flat); (G, Natural); (B, Flat)|];
-        [|(G, Natural); (B, Natural); (D, Natural)|];
-        [|(B, Natural); (D, Sharp); (F, Sharp)|];
-        [|(G, Sharp); (B, Natural); (D, Sharp)|];
+        d_m;
+        d_m;
+        g_m7;
+        c_7;
+        ees_m7b5;
+        a_7s5s9;
+        d_m;
+        d_m;
+        f_m7;
+        bes_7;
+        ees_maj7;
+        ees_m7b5;
+        a_7s5s9;
+        d_m;
+        a_7s5;
       ] in
-    set_arpeggios ((C, Natural), 2) 7 33 b cs;
+    set_arpeggios ((G, Natural), 1) 4 33 b cs;
   );
   Buffer.add_string b {|
 }
