@@ -216,10 +216,10 @@ let () : unit =
   tests ();
   let b : Buffer.t = Buffer.create (1 lsl 10) in
   Buffer.add_string b {|\version "2.22.1"
-#(set-global-staff-size 28)
+#(set-global-staff-size 36)
 \paper {
   indent = 0\mm
-  line-width = 150\mm
+  line-width = 200\mm
   oddFooterMarkup = ##f
   oddHeaderMarkup = ##f
   bookTitleMarkup = ##f
@@ -269,7 +269,7 @@ melody = {
         d_m;
         a_7s5;
       ] in
-    set_arpeggios ((G, Natural), 1) 4 33 b cs;
+    set_arpeggios ((G, Natural), 1) 11 33 b cs;
   );
   Buffer.add_string b {|
 }
