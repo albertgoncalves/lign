@@ -3,6 +3,9 @@
 !*.nix
 !.shellhook
 !.ocp-indent
+
 !src/
 !*.ml
-!main
+
+!scripts/
+!*.sh

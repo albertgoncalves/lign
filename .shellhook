@@ -1,29 +1,3 @@
 #!/usr/bin/env bash
 
 export WD=$PWD
-
-for x in bin build out; do
-    if [ ! -d "$WD/$x" ]; then
-        mkdir "$WD/$x"
-    fi
-done
-
-handle () {
-    echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/'
-}
-
-score () {
-    lilypond -o "$WD/out" -dbackend=eps -ddelete-intermediate-files \
-        -dinclude-eps-fonts -dno-gs-load-fonts -dpixmap-format=pngalpha --png \
-        "$1" && \
-    feh -B gray "$WD/out/$(handle "$1").png"
-}
-
-midi () {
-    x="$WD/out/$(handle "$1").wav"
-    timidity "$1" -Ow -o "$x" && \
-    aplay "$x"
-}
-
-export -f score
-export -f midi
