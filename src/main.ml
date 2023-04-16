@@ -31,7 +31,7 @@ let pitch_to_int ((n, a) : pitch) : int =
   | Sharp -> x + 1
 
 let abs_pitch_to_int ((p, o): abs_pitch) : int =
-  (pitch_to_int p) + (o * 12)
+  (pitch_to_int p) + ((o - 1) * 12)
 
 let get_durations () : duration Queue.t =
   let ds : duration Queue.t = Queue.create () in
@@ -215,70 +215,103 @@ let tests () : unit =
 let () : unit =
   tests ();
   let b : Buffer.t = Buffer.create (1 lsl 10) in
-  Buffer.add_string b {|\version "2.22.1"
-#(set-global-staff-size 36)
+
+  Random.self_init ();
+  let d_m : pitch array =
+    [|(D, Natural); (F, Natural); (A, Natural)|] in
+  let g_m7 : pitch array =
+    [|(G, Natural); (B, Flat); (D, Natural); (F, Natural)|] in
+  let c_7 : pitch array =
+    [|(C, Natural); (E, Natural); (G, Natural); (B, Flat)|] in
+  let ees_m7b5 : pitch array =
+    [|(E, Flat); (G, Flat); (B, DoubleFlat); (D, Flat)|] in
+  let a_7s5s9 : pitch array =
+    [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural); (B, Sharp)|] in
+  let f_m7 : pitch array =
+    [|(F, Natural); (A, Flat); (C, Natural); (E, Flat)|] in
+  let bes_7 : pitch array =
+    [|(B, Flat); (D, Natural); (F, Natural); (A, Flat)|] in
+  let ees_maj7 : pitch array =
+    [|(E, Flat); (G, Natural); (B, Flat); (D, Natural)|] in
+  let a_7s5 : pitch array =
+    [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural)|] in
+  let cs : chord list =
+    [
+      d_m;
+      d_m;
+      g_m7;
+      c_7;
+      ees_m7b5;
+      a_7s5s9;
+      d_m;
+      d_m;
+      f_m7;
+      bes_7;
+      ees_maj7;
+      ees_m7b5;
+      a_7s5s9;
+      d_m;
+      a_7s5;
+    ] in
+
+  Buffer.add_string b (Printf.sprintf {|\version "2.24.1"
+\include "swing.ly"
 \paper {
   indent = 0\mm
-  line-width = 200\mm
-  oddFooterMarkup = ##f
-  oddHeaderMarkup = ##f
-  bookTitleMarkup = ##f
-  scoreTitleMarkup = ##f
 }
-melody = {
-  \clef treble
+\header {
+  tagline = ##f
+}
+global = {
   \time 4/4
-  \tempo 4 = 50
-  \key d \minor
-  |};
-  (
-    Random.self_init ();
-    let d_m : pitch array =
-      [|(D, Natural); (F, Natural); (A, Natural)|] in
-    let g_m7 : pitch array =
-      [|(G, Natural); (B, Flat); (D, Natural); (F, Natural)|] in
-    let c_7 : pitch array =
-      [|(C, Natural); (E, Natural); (G, Natural); (B, Flat)|] in
-    let ees_m7b5 : pitch array =
-      [|(E, Flat); (G, Flat); (B, DoubleFlat); (D, Flat)|] in
-    let a_7s5s9 : pitch array =
-      [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural); (B, Sharp)|] in
-    let f_m7 : pitch array =
-      [|(F, Natural); (A, Flat); (C, Natural); (E, Flat)|] in
-    let bes_7 : pitch array =
-      [|(B, Flat); (D, Natural); (F, Natural); (A, Flat)|] in
-    let ees_maj7 : pitch array =
-      [|(E, Flat); (G, Natural); (B, Flat); (D, Natural)|] in
-    let a_7s5 : pitch array =
-      [|(A, Natural); (C, Sharp); (E, Sharp); (G, Natural)|] in
-    let cs : chord list =
-      [
-        d_m;
-        d_m;
-        g_m7;
-        c_7;
-        ees_m7b5;
-        a_7s5s9;
-        d_m;
-        d_m;
-        f_m7;
-        bes_7;
-        ees_maj7;
-        ees_m7b5;
-        a_7s5s9;
-        d_m;
-        a_7s5;
-      ] in
-    set_arpeggios ((G, Natural), 1) 11 33 b cs;
-  );
+  \tempo 4 = 200
+}
+count_in = \new DrumStaff {
+  \global
+  \drummode
+  {
+    cl4 cl  cl  cl  |
+  }
+}
+pulse = \new DrumStaff {
+  \global
+  \drummode
+  {
+    \repeat unfold %d {
+      r4  hh  r   hh  |
+    }
+  }
+}
+melody = \new Staff \with { midiInstrument = "electric guitar (jazz)" } {
+  \global
+  \clef "treble_8"
+  {
+|} (List.length cs));
+
+  set_arpeggios ((G, Natural), 0) (-12) 7 b cs;
+
   Buffer.add_string b {|
+  }
 }
 \score {
-  \new Staff \melody
+  {
+    \melody
+  }
   \layout { }
+}
+\score {
+  \applySwing 8 #'(4 3)
+  {
+    \count_in
+    <<
+      \melody
+      \pulse
+    >>
+  }
   \midi { }
 }
 |};
+
   if (Array.length Sys.argv) < 2 then (
     Buffer.output_buffer stdout b;
     flush stdout
